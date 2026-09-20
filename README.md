@@ -7,6 +7,12 @@ merchant you are standing in — combining the card's own earn rate with any
 targeted offer you hold on it — then hands you off to the issuer to activate,
 and tells you what your points are worth across every program.
 
+## Navigation
+
+Four tabs: **Home** (which card to use, right here), **Search** (find an offer
+across every card), **Dashboard** (your position at a glance) and **More**
+(wallet, offers, points, account).
+
 ## The flow
 
 1. **Walk in.** Type the store (or pull a guess from GPS) and roughly what you
@@ -19,21 +25,32 @@ and tells you what your points are worth across every program.
 5. **Use them well.** Every redemption route ranked, so the balance you were
    about to cash out at 0.6¢ gets compared against what it is actually worth.
 
-## Running it
+## Running it on your phone
+
+Every dependency is an Expo SDK module, so this runs in **Expo Go** — no build
+step, no Apple account, no Xcode.
 
 ```bash
 npm install
 npx expo start
 ```
 
-The offer-import and location features use native modules, so they need an
-[EAS development build](https://docs.expo.dev/develop/development-builds/introduction/)
-rather than Expo Go. Load the sample wallet from the Wallet tab to explore the
-flow without entering real data.
+Install Expo Go ([iOS](https://apps.apple.com/app/expo-go/id982107779) ·
+[Android](https://play.google.com/store/apps/details?id=host.exp.exponent)) and
+scan the QR code in your terminal — the Camera app on iPhone, Expo Go's own
+scanner on Android. Phone and computer need to be on the same Wi-Fi; if the
+network isolates clients, use `npx expo start --tunnel`.
+
+Create an account on first launch, then load the sample wallet from **More →
+Wallet** to explore with data already in place.
+
+For a standalone app you can install without Expo Go, or submit to the App
+Store, use [EAS Build](https://docs.expo.dev/build/setup/) — not needed yet.
 
 ```bash
 npm test         # engine unit tests
 npm run typecheck
+npm run logo     # regenerate icon and splash assets
 ```
 
 ## How it is put together
@@ -48,6 +65,9 @@ and fully unit tested. The UI in `app/` is a thin layer over it.
 | `src/engine/atStore.ts` | Rank the wallet for a merchant and basket |
 | `src/engine/regret.ts` | What optimal routing would have earned, and missed credits |
 | `src/engine/points.ts` | Pool and value balances across programs |
+| `src/engine/search.ts` | Incremental search across every offer |
+| `src/engine/dates.ts` | Local-calendar expiry maths, shared by all callers |
+| `src/auth/` | Account layer behind a swappable `AuthProvider` |
 | `src/engine/redeem.ts` | Rank redemption routes and price the decision |
 | `src/data/*` | Curated cards, categories, currencies, issuers |
 
@@ -88,6 +108,22 @@ $50k/yr. The regret engine consumes caps against a ledger in date order; the
 at-register ranking cannot know how much of a cap is spent and says so
 (`UNCAPPED_LEDGER`).
 
+## Accounts
+
+The account flow is real — sign up, sign in, edit profile, sign out — but it
+runs on a device-local provider, and that is **not authentication**. There is no
+server, so nothing is verified, nothing syncs between devices, and signing in
+only requires an email already stored on that phone. The UI says this plainly on
+both the welcome and account screens rather than implying otherwise.
+
+No password is asked for, deliberately. A password checked on-device protects
+nothing — anyone holding the phone can read the stored value — so implementing
+one would be security theatre. Real credentials arrive with a real backend.
+
+Everything sits behind the `AuthProvider` interface in `src/auth/types.ts`.
+Swapping in Supabase, Clerk or Firebase means implementing that interface and
+changing one line in `src/store/useAuth.ts`.
+
 ## Known limits
 
 These are deliberate, and each is the honest state of the art rather than a
@@ -114,6 +150,8 @@ missing feature:
 - **Transfer partners and ratios change** without much notice, and transfers
   are irreversible. `PARTNERS_AS_OF` in `src/data/redemptions.ts` records when
   the snapshot was taken; verify before moving points.
+- **Accounts are device-local.** See above — the seam is real, the backend is
+  not there yet.
 - **Point valuations are opinions.** Defaults ship in
   `src/data/currencies.ts`; every one is user-overridable, and the whole app
   re-ranks when they change.

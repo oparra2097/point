@@ -2,8 +2,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { Link } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Link, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
@@ -26,7 +26,14 @@ export default function NowScreen() {
   const cppOverrides = useWallet((s) => s.cppOverrides);
   const setActivated = useWallet((s) => s.setActivated);
 
-  const [merchant, setMerchant] = useState('Mango');
+  // Search hands a merchant over through the route, so arriving here from a
+  // result lands on that store rather than whatever was last typed.
+  const params = useLocalSearchParams<{ merchant?: string }>();
+  const [merchant, setMerchant] = useState(params.merchant ?? 'Mango');
+
+  useEffect(() => {
+    if (params.merchant) setMerchant(params.merchant);
+  }, [params.merchant]);
   const [amount, setAmount] = useState('100');
   const [locating, setLocating] = useState(false);
   const [locationNote, setLocationNote] = useState<string | null>(null);

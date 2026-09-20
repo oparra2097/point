@@ -3,11 +3,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CARD_CATALOG, CARDS_BY_ID, creditsPerYear } from '../../src/data/cards';
-import { ISSUERS } from '../../src/data/issuers';
-import { useWallet } from '../../src/store/useWallet';
-import { Button, Card, Chip, Empty, SectionHeader } from '../../src/ui/components';
-import { money, radius, space, type as t, usePalette } from '../../src/ui/theme';
+import { CARD_CATALOG, CARDS_BY_ID, creditsPerYear } from '../src/data/cards';
+import { ISSUERS } from '../src/data/issuers';
+import { useWallet } from '../src/store/useWallet';
+import { Button, Card, Chip, Empty, SectionHeader } from '../src/ui/components';
+import { money, radius, space, type as t, usePalette } from '../src/ui/theme';
 
 export default function WalletScreen() {
   const p = usePalette();

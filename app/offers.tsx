@@ -4,21 +4,15 @@ import { useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CARDS_BY_ID } from '../../src/data/cards';
-import { ISSUERS } from '../../src/data/issuers';
-import { describeOffer, unactivatedOffers } from '../../src/engine/atStore';
-import { displayMerchant } from '../../src/engine/merchant';
-import { parseOffer } from '../../src/engine/parseOffer';
-import { useWallet } from '../../src/store/useWallet';
-import { Button, Card, Chip, Empty, SectionHeader } from '../../src/ui/components';
-import { radius, space, type as t, usePalette } from '../../src/ui/theme';
-
-function daysUntil(iso: string, now = new Date()): number {
-  const [y, m, d] = iso.split('-').map(Number);
-  const expiry = new Date(y, m - 1, d).getTime();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  return Math.round((expiry - today) / 86_400_000);
-}
+import { CARDS_BY_ID } from '../src/data/cards';
+import { ISSUERS } from '../src/data/issuers';
+import { describeOffer, unactivatedOffers } from '../src/engine/atStore';
+import { daysUntil } from '../src/engine/dates';
+import { displayMerchant } from '../src/engine/merchant';
+import { parseOffer } from '../src/engine/parseOffer';
+import { useWallet } from '../src/store/useWallet';
+import { Button, Card, Chip, Empty, SectionHeader } from '../src/ui/components';
+import { radius, space, type as t, usePalette } from '../src/ui/theme';
 
 export default function OffersScreen() {
   const p = usePalette();

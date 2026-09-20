@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CURRENCY_LIST, CURRENCIES, type CurrencyId } from '../../src/data/currencies';
-import { aggregatePoints } from '../../src/engine/points';
-import { bestUse, portfolioUpside } from '../../src/engine/redeem';
-import { useWallet } from '../../src/store/useWallet';
-import { Card, Empty, SectionHeader } from '../../src/ui/components';
-import { money, points as fmtPoints, radius, space, type as t, usePalette } from '../../src/ui/theme';
+import { CURRENCY_LIST, CURRENCIES, type CurrencyId } from '../src/data/currencies';
+import { aggregatePoints } from '../src/engine/points';
+import { bestUse, portfolioUpside } from '../src/engine/redeem';
+import { useWallet } from '../src/store/useWallet';
+import { Card, Empty, SectionHeader } from '../src/ui/components';
+import { money, points as fmtPoints, radius, space, type as t, usePalette } from '../src/ui/theme';
 
 function monthsSince(iso: string, now = new Date()): number {
   const [y, m] = iso.split('-').map(Number);

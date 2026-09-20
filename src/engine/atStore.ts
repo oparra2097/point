@@ -18,6 +18,7 @@ import { guessCategory, type CategoryId } from '../data/categories';
 import { CURRENCIES, type CurrencyId } from '../data/currencies';
 import { ISSUERS, type IssuerInfo } from '../data/issuers';
 import type { OfferKind } from './parseOffer';
+import { daysUntil, localDateKey } from './dates';
 import { matchMerchant } from './merchant';
 import { earnOn, UNCAPPED_LEDGER, type CppOverrides } from './regret';
 
@@ -77,35 +78,6 @@ export interface AtStoreOptions {
   /** Overrides merchant-name inference when the user corrects the category. */
   categoryOverride?: CategoryId;
   now?: Date;
-}
-
-/**
- * The device's own calendar date as YYYY-MM-DD.
- *
- * Deliberately local rather than UTC: issuers print expiry as a local calendar
- * date, so a user in UTC-8 shopping at 6pm on the 25th must still see an offer
- * that expires on the 25th. Comparing against a UTC date would expire it a day
- * early for everyone west of Greenwich.
- */
-function localDateKey(d: Date): string {
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-/**
- * Whole calendar days from today until an ISO date; negative once past.
- *
- * Compares dates at midnight rather than mixing an end-of-day expiry against
- * the current clock time, which rounds "expires on the 25th, today is the
- * 20th" up to 6 days instead of 5. Rounding absorbs the 23- and 25-hour days
- * either side of a DST change.
- */
-function daysUntil(isoDate: string, now: Date): number {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const expiry = new Date(y, m - 1, d).getTime();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  return Math.round((expiry - today) / 86_400_000);
 }
 
 function cppOf(currency: CurrencyId, overrides: CppOverrides = {}): number {
@@ -298,5 +270,30 @@ export function describeOffer(offer: OfferTerms): string {
       return `${(offer.pointsBack ?? 0).toLocaleString()} points${offer.minSpend ? ` on ${dollars(offer.minSpend)}` : ''}`;
     default:
       return 'Offer';
+  }
+}
+
+/**
+ * The most an offer could ever pay, where that is bounded.
+ *
+ * Returns undefined for an uncapped percent offer, because its ceiling
+ * depends on how much is spent and inventing one would overstate what is
+ * sitting unclaimed. Callers should present those separately rather than
+ * folding a guess into a total.
+ */
+export function offerCeiling(
+  offer: OfferTerms,
+  currency: CurrencyId,
+  overrides: CppOverrides = {},
+): number | undefined {
+  switch (offer.kind) {
+    case 'percent':
+      return offer.maxBack;
+    case 'spend_get':
+      return offer.amountBack;
+    case 'points':
+      return ((offer.pointsBack ?? 0) * cppOf(currency, overrides)) / 100;
+    default:
+      return undefined;
   }
 }

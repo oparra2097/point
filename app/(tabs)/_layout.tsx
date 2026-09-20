@@ -1,11 +1,19 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
+import { useAuth } from '../../src/store/useAuth';
 import { usePalette } from '../../src/ui/theme';
 
 export default function TabsLayout() {
   const p = usePalette();
+  const profile = useAuth((s) => s.profile);
+
+  // The whole tab section is behind an account. The root layout has already
+  // finished restoring by the time this renders, so a null profile here
+  // genuinely means signed out rather than "not loaded yet".
+  if (!profile) return <Redirect href="/welcome" />;
+
   return (
     <Tabs
       screenOptions={{
@@ -22,29 +30,29 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Now',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="map-marker-radius" color={color} size={size} />,
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home-variant" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="offers"
+        name="search"
         options={{
-          title: 'Offers',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="tag-multiple" color={color} size={size} />,
+          title: 'Search',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="magnify" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="points"
+        name="dashboard"
         options={{
-          title: 'Points',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="star-four-points" color={color} size={size} />,
+          title: 'Dashboard',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="view-dashboard-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
-        name="wallet"
+        name="more"
         options={{
-          title: 'Wallet',
-          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="credit-card-multiple" color={color} size={size} />,
+          title: 'More',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="menu" color={color} size={size} />,
         }}
       />
     </Tabs>
