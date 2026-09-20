@@ -5,9 +5,21 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "app.point.wallet",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "point uses your location to identify the store you are in, so it can show which of your cards has an offer here.",
+        "LSApplicationQueriesSchemes": [
+          "amex",
+          "chase",
+          "capitalone",
+          "citimobile",
+          "bofa",
+          "discover"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +28,28 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "app.point.wallet",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "scheme": "point",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "point uses your location to identify the store you are in, so it can show which of your cards has an offer here."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }

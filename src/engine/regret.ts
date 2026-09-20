@@ -64,8 +64,31 @@ function categoryOf(txn: Transaction): CategoryId {
   return txn.categoryId ?? guessCategory(txn.merchant);
 }
 
+/**
+ * Tracks how much bonus-rate headroom a capped earn rule has left.
+ *
+ * Abstracted so callers that legitimately have no cap state -- the at-register
+ * ranking, which cannot know how much of an annual cap has been spent -- can
+ * pass UNCAPPED_LEDGER instead of fabricating one.
+ */
+export interface Ledger {
+  remaining(cardId: string, ruleIndex: number, year: number, cap: number): number;
+  consume(cardId: string, ruleIndex: number, year: number, amount: number): void;
+}
+
+/**
+ * Assumes every bonus category still has headroom.
+ *
+ * Correct for a point-of-sale ranking, where the alternative is inventing cap
+ * state. Once a transaction feed is connected, pass a real CapLedger instead.
+ */
+export const UNCAPPED_LEDGER: Ledger = {
+  remaining: () => Number.POSITIVE_INFINITY,
+  consume: () => {},
+};
+
 /** Tracks capped-rate spend so a cap is only honoured until it is exhausted. */
-class CapLedger {
+class CapLedger implements Ledger {
   private used = new Map<string, number>();
 
   /** Dollars still eligible for this rule's bonus rate in this year. */
@@ -112,7 +135,7 @@ export function earnOn(
   card: CardSpec,
   category: CategoryId,
   amount: number,
-  ledger: CapLedger,
+  ledger: Ledger,
   year: number,
   opts: Options = {},
 ): Earning {
@@ -273,7 +296,7 @@ function earnOnProbe(
   card: CardSpec,
   category: CategoryId,
   amount: number,
-  source: CapLedger,
+  source: Ledger,
   year: number,
   opts: Options,
 ): number {
