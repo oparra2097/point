@@ -16,6 +16,8 @@ and tells you what your points are worth across every program.
 3. **Activate.** An offer pays nothing until it is enrolled in the issuer's app.
    One tap opens the issuer and marks it activated.
 4. **Check your points.** All programs pooled and valued in dollars.
+5. **Use them well.** Every redemption route ranked, so the balance you were
+   about to cash out at 0.6¢ gets compared against what it is actually worth.
 
 ## Running it
 
@@ -46,6 +48,7 @@ and fully unit tested. The UI in `app/` is a thin layer over it.
 | `src/engine/atStore.ts` | Rank the wallet for a merchant and basket |
 | `src/engine/regret.ts` | What optimal routing would have earned, and missed credits |
 | `src/engine/points.ts` | Pool and value balances across programs |
+| `src/engine/redeem.ts` | Rank redemption routes and price the decision |
 | `src/data/*` | Curated cards, categories, currencies, issuers |
 
 A few decisions worth knowing about, because they are easy to get wrong:
@@ -70,6 +73,15 @@ this is a per-card ranking rather than a sum.
 **Portal-only rates are excluded by default.** Venture X pays 10x on hotels
 booked through Capital One Travel, not at the front desk. Counting portal rates
 at the register invents value that was never available.
+
+**A balance is a range, not a number.** The same 184,500 Membership Rewards is
+$1,107 as a statement credit or $9,225 transferred into the right premium-cabin
+award — and the issuer's own app steers toward the low end, because statement
+credits cost them least. So redemption routes are ranked with the route most
+people default to marked explicitly, and the gap between that and the best
+route is reported as a dollar figure. Fixed routes (cash, portal) carry exact
+rates; transfer routes carry ranges, because award pricing is dynamic and a
+single number would be false precision.
 
 **Bonus categories have annual caps.** Amex Gold pays 4x on dining only to
 $50k/yr. The regret engine consumes caps against a ledger in date order; the
@@ -99,6 +111,9 @@ missing feature:
 - **Merchant detection from GPS is approximate.** Reverse geocoding returns an
   address and only sometimes a point-of-interest name. Identifying "the Mango
   in this mall" needs a places provider.
+- **Transfer partners and ratios change** without much notice, and transfers
+  are irreversible. `PARTNERS_AS_OF` in `src/data/redemptions.ts` records when
+  the snapshot was taken; verify before moving points.
 - **Point valuations are opinions.** Defaults ship in
   `src/data/currencies.ts`; every one is user-overridable, and the whole app
   re-ranks when they change.

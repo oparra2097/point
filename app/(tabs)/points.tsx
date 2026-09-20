@@ -1,10 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CURRENCY_LIST, CURRENCIES, type CurrencyId } from '../../src/data/currencies';
 import { aggregatePoints } from '../../src/engine/points';
+import { bestUse, portfolioUpside } from '../../src/engine/redeem';
 import { useWallet } from '../../src/store/useWallet';
 import { Card, Empty, SectionHeader } from '../../src/ui/components';
 import { money, points as fmtPoints, radius, space, type as t, usePalette } from '../../src/ui/theme';
@@ -26,6 +28,9 @@ export default function PointsScreen() {
   const [draft, setDraft] = useState('');
 
   const summary = useMemo(() => aggregatePoints(balances, cppOverrides), [balances, cppOverrides]);
+  const uses = useMemo(() => bestUse(balances, cppOverrides), [balances, cppOverrides]);
+  const useByCurrency = useMemo(() => new Map(uses.map((u) => [u.currency.id, u])), [uses]);
+  const upside = useMemo(() => portfolioUpside(uses), [uses]);
 
   const held = new Set(summary.lines.map((l) => l.currency.id));
   const addable = CURRENCY_LIST.filter((c) => !held.has(c.id));
@@ -65,6 +70,22 @@ export default function PointsScreen() {
           Points across programs are not interchangeable - value is the comparable number.
         </Text>
       </Card>
+
+      {upside.upside > 0 ? (
+        <Card style={{ borderColor: p.positive, gap: space.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            <MaterialCommunityIcons name="trending-up" size={22} color={p.positive} />
+            <Text style={[t.heading, { color: p.text, flex: 1 }]}>
+              {money(upside.upside, false)} on the table
+            </Text>
+          </View>
+          <Text style={[t.caption, { color: p.textMuted }]}>
+            Taking the easy route on every program gives {money(upside.defaultTotal, false)}.
+            Redeeming each at its best typical rate gives {money(upside.bestTotal, false)}, and up
+            to {money(upside.bestCeiling, false)} at the top end.
+          </Text>
+        </Card>
+      ) : null}
 
       {stale >= 3 ? (
         <Card style={{ borderColor: p.warning, flexDirection: 'row', gap: space.sm, alignItems: 'center' }}>
@@ -139,6 +160,27 @@ export default function PointsScreen() {
                   }}
                 />
               </View>
+
+              {(() => {
+                const u = useByCurrency.get(line.currency.id);
+                if (!u) return null;
+                return (
+                  <Link href={`/program/${line.currency.id}`} asChild>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Best ways to use ${line.currency.name}`}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}
+                    >
+                      <Text style={[t.caption, { color: p.accent, flex: 1, fontWeight: '600' }]}>
+                        {u.upside > 0
+                          ? `${money(u.upside, false)} better than cashing out`
+                          : `Best use: ${u.best.route.label}`}
+                      </Text>
+                      <MaterialCommunityIcons name="chevron-right" size={18} color={p.accent} />
+                    </Pressable>
+                  </Link>
+                );
+              })()}
             </Card>
           );
         })}
