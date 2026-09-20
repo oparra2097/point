@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuth } from '../src/store/useAuth';
+import { authKind, useAuth } from '../src/store/useAuth';
 import { useWallet } from '../src/store/useWallet';
 import { Button, Card, SectionHeader } from '../src/ui/components';
 import { radius, space, type as t, usePalette } from '../src/ui/theme';
@@ -16,6 +16,7 @@ export default function AccountScreen() {
   const profile = useAuth((s) => s.profile);
   const busy = useAuth((s) => s.busy);
   const error = useAuth((s) => s.error);
+  const notice = useAuth((s) => s.notice);
   const updateProfile = useAuth((s) => s.updateProfile);
   const signOut = useAuth((s) => s.signOut);
   const resetWallet = useWallet((s) => s.reset);
@@ -103,8 +104,13 @@ export default function AccountScreen() {
         {error ? (
           <Text style={[t.label, { color: p.danger }]} accessibilityLiveRegion="polite">{error}</Text>
         ) : null}
-        {saved ? (
+        {saved && !notice ? (
           <Text style={[t.label, { color: p.positive }]} accessibilityLiveRegion="polite">Saved.</Text>
+        ) : null}
+        {notice ? (
+          <Text style={[t.caption, { color: p.warning, lineHeight: 18 }]} accessibilityLiveRegion="polite">
+            {notice}
+          </Text>
         ) : null}
 
         <Button label={busy ? 'Saving…' : 'Save changes'} onPress={save} disabled={!dirty || busy} />
@@ -116,18 +122,30 @@ export default function AccountScreen() {
         </Text>
       ) : null}
 
+      {/* An account screen implies a server. Say which one is actually behind
+          it, rather than letting the UI imply more than is true. */}
       <Card style={{ gap: space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-          <MaterialCommunityIcons name="cellphone-lock" size={20} color={p.textMuted} />
-          <Text style={[t.label, { color: p.text, flex: 1 }]}>Stored on this device</Text>
+          <MaterialCommunityIcons
+            name={authKind === 'supabase' ? 'cloud-check-outline' : 'cellphone-lock'}
+            size={20}
+            color={authKind === 'supabase' ? p.positive : p.textMuted}
+          />
+          <Text style={[t.label, { color: p.text, flex: 1 }]}>
+            {authKind === 'supabase' ? 'Verified account' : 'Stored on this device'}
+          </Text>
         </View>
-        {/* Saying this plainly matters: an account screen implies a server, and
-            there isn't one yet. */}
         <Text style={[t.caption, { color: p.textMuted, lineHeight: 18 }]}>
-          Your profile, cards, offers and balances never leave this phone. There is no server, so
-          nothing syncs to another device and signing in only needs an email already stored here.
-          Deleting the app deletes everything.
+          {authKind === 'supabase'
+            ? 'Your identity is verified by email code and your profile lives on the server. Changing your email sends a confirmation to the new address, and only takes effect once you confirm it.'
+            : 'Your profile, cards, offers and balances never leave this phone. There is no server, so nothing syncs to another device and signing in only needs an email already stored here. Deleting the app deletes everything.'}
         </Text>
+        {authKind === 'supabase' ? (
+          <Text style={[t.caption, { color: p.textFaint, lineHeight: 18 }]}>
+            Cards, offers and balances are still stored on this device — syncing them is the next
+            step.
+          </Text>
+        ) : null}
       </Card>
 
       <SectionHeader title="Danger zone" />

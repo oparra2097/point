@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local environment (never commit real keys)
+.env
+.env.local

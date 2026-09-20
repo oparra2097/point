@@ -67,7 +67,8 @@ and fully unit tested. The UI in `app/` is a thin layer over it.
 | `src/engine/points.ts` | Pool and value balances across programs |
 | `src/engine/search.ts` | Incremental search across every offer |
 | `src/engine/dates.ts` | Local-calendar expiry maths, shared by all callers |
-| `src/auth/` | Account layer behind a swappable `AuthProvider` |
+| `src/auth/` | Account layer: Supabase and device-local providers |
+| `supabase/migrations/` | Database schema and row-level security policies |
 | `src/engine/redeem.ts` | Rank redemption routes and price the decision |
 | `src/data/*` | Curated cards, categories, currencies, issuers |
 
@@ -108,21 +109,66 @@ $50k/yr. The regret engine consumes caps against a ledger in date order; the
 at-register ranking cannot know how much of a cap is spent and says so
 (`UNCAPPED_LEDGER`).
 
-## Accounts
+## Accounts and the server
 
-The account flow is real — sign up, sign in, edit profile, sign out — but it
-runs on a device-local provider, and that is **not authentication**. There is no
-server, so nothing is verified, nothing syncs between devices, and signing in
-only requires an email already stored on that phone. The UI says this plainly on
-both the welcome and account screens rather than implying otherwise.
+Accounts run on **Supabase** — Postgres, auth and row-level security in one
+box. Two reasons it was chosen over the alternatives: its SDK is pure
+JavaScript, so **Expo Go keeps working** (Firebase's React Native SDK needs a
+native module and would force dev builds immediately), and the same project
+gives you the database you need to sync cards, offers and balances next.
 
-No password is asked for, deliberately. A password checked on-device protects
-nothing — anyone holding the phone can read the stored value — so implementing
-one would be security theatre. Real credentials arrive with a real backend.
+Sign-in is **email one-time code**, not magic links. A link has to deep-link
+back into the app, which is fragile under Expo Go's `exp://` URLs and breaks
+differently across email clients; a typed code behaves the same everywhere.
+There is no password at all — nothing to leak, nothing reused from another
+site.
 
-Everything sits behind the `AuthProvider` interface in `src/auth/types.ts`.
-Swapping in Supabase, Clerk or Firebase means implementing that interface and
-changing one line in `src/store/useAuth.ts`.
+One flow covers both sign-up and sign-in: `signInWithOtp` creates the user if
+the address is new, so there is no separate register path and no way to land on
+the wrong one.
+
+### Setting it up
+
+1. Create a project at [supabase.com](https://supabase.com) (free tier is
+   enough). Pick a region near your users.
+2. **SQL Editor → New query**, paste `supabase/migrations/0001_profiles.sql`,
+   and run it. That creates `public.profiles`, enables row-level security, and
+   adds the triggers that keep a profile row in step with `auth.users`.
+3. **Project Settings → Data API**, copy the project URL and the `anon`
+   publishable key.
+4. `cp .env.example .env` and paste both values in.
+5. Restart the dev server with `npx expo start --clear` — env vars are inlined
+   at bundle time, so a running server will not pick them up.
+
+Without those variables the app falls back to the device-local provider and
+still runs, which keeps `npx expo start` working for a fresh clone.
+
+By default Supabase's built-in mailer is rate-limited to a handful of messages
+an hour — fine for development, not for real users. Configure your own SMTP
+under **Authentication → Emails** before launch.
+
+### Security notes
+
+The `anon` key is **publishable by design** and is meant to ship in the app.
+What protects your data is row-level security, not the key's secrecy — which is
+why the migration enables RLS on `profiles` before adding any policy, and why
+every policy is scoped to `auth.uid() = id`. Anything prefixed
+`EXPO_PUBLIC_` is inlined into the JS bundle and readable by anyone with the
+app, so the `service_role` key must never appear in this project. `.env` is
+gitignored.
+
+The `handle_new_user` trigger runs `security definer` because it fires before
+any session exists and so cannot pass its own RLS policies. It therefore also
+sets `search_path = ''` and schema-qualifies every identifier: without that, a
+caller can shadow the referenced objects and run their own code with the
+definer's privileges.
+
+### What is not synced yet
+
+Accounts are real; **cards, offers and balances still live on the device**.
+Syncing them is the obvious next step and needs a second migration with the
+same RLS shape, plus a sync layer in the wallet store. The account screen says
+so rather than implying your data is backed up.
 
 ## Known limits
 
@@ -150,8 +196,8 @@ missing feature:
 - **Transfer partners and ratios change** without much notice, and transfers
   are irreversible. `PARTNERS_AS_OF` in `src/data/redemptions.ts` records when
   the snapshot was taken; verify before moving points.
-- **Accounts are device-local.** See above — the seam is real, the backend is
-  not there yet.
+- **Wallet data is device-local.** Accounts are on the server; cards, offers
+  and balances are not synced yet, so they do not survive a reinstall.
 - **Point valuations are opinions.** Defaults ship in
   `src/data/currencies.ts`; every one is user-overridable, and the whole app
   re-ranks when they change.
